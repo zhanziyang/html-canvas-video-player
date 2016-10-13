@@ -88,7 +88,11 @@ window.CanvasVideoPlayer = (function () {
 			} else {
 				// Creates audio element which uses same video sources
 				this.audio = document.createElement('audio');
-				this.audio.innerHTML = this.video.innerHTML;
+				if (this.video.src) {
+					this.audio.src = this.video.src;
+				} else {
+					this.audio.innerHTML = this.video.innerHTML;
+				}
 				this.video.parentNode.insertBefore(this.audio, this.video);
 				this.audio.load();
 			}
