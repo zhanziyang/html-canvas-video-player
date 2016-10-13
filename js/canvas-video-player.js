@@ -44,7 +44,8 @@ window.CanvasVideoPlayer = (function () {
 			audio: false,
 			timelineSelector: false,
 			resetOnLastFrame: true,
-			loop: false
+			loop: false,
+			playPauseWhenClick: false
 		};
 
 		for (i in options) {
@@ -160,9 +161,11 @@ window.CanvasVideoPlayer = (function () {
 	CanvasVideoPlayer.prototype.bind = function () {
 		var self = this;
 
-		// Playes or pauses video on canvas click
+		// On canvas click
 		this.canvas.addEventListener('click', cvpHandlers.canvasClickHandler = function () {
-			self.playPause();
+			if (self.options.playPauseWhenClick) {
+				self.playPause();
+			}
 		});
 
 		// On every time update draws frame
