@@ -237,6 +237,9 @@ window.CanvasVideoPlayer = (function () {
 	CanvasVideoPlayer.prototype.play = function () {
 		this.lastTime = Date.now();
 		this.playing = true;
+		if (this.video.ended) {
+			this.video.currentTime = 0;
+		}
 		this.loop();
 
 		if (this.options.audio) {
