@@ -267,6 +267,10 @@ window.CanvasVideoPlayer = (function () {
 	};
 
 	CanvasVideoPlayer.prototype.loop = function () {
+		if (!this.playing) {
+			cancelAnimationFrame(this.animationFrame);
+			return;
+		}
 		var self = this;
 
 		var time = Date.now();
