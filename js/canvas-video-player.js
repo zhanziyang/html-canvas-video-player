@@ -27,6 +27,9 @@
 } ());
 
 window.CanvasVideoPlayer = (function () {
+	var userAgent = window.navigator.userAgent.toLowerCase();
+	var iOS = userAgent.indexOf("iphone;") > -1 || userAgent.indexOf("ipad;") > -1;
+
 	var cvpHandlers = {
 		canvasClickHandler: null,
 		videoTimeUpdateHandler: null,
@@ -84,6 +87,10 @@ window.CanvasVideoPlayer = (function () {
 			return;
 		}
 
+		if (!iOS) {
+			this.video.loop = this.options.loop;
+		}
+
 		if (this.options.audio) {
 			if (typeof (this.options.audio) === 'string') {
 				// Use audio selector from options if specified
@@ -105,7 +112,6 @@ window.CanvasVideoPlayer = (function () {
 				this.audio.load();
 			}
 
-			var iOS = /iPad|iPhone|iPod/.test(navigator.platform);
 			if (iOS) {
 				// Autoplay doesn't work with audio on iOS
 				// User have to manually start the audio
@@ -130,10 +136,14 @@ window.CanvasVideoPlayer = (function () {
 	CanvasVideoPlayer.prototype.init = function () {
 		this.video.load();
 
-		this.setCanvasSize();
+		if (iOS) {
+			this.setCanvasSize();
 
-		if (this.options.hideVideo) {
-			this.video.style.display = 'none';
+			if (this.options.hideVideo) {
+				this.video.style.display = 'none';
+			}
+		} else {
+			this.canvas.style.display = 'none';
 		}
 	};
 
@@ -195,7 +205,11 @@ window.CanvasVideoPlayer = (function () {
 		});
 
 		// On each frame
-		this.video.addEventListener("seeked", this.options.onPlaying);
+		if (iOS) {
+			this.video.addEventListener("seeked", this.options.onPlaying);
+		} else {
+			this.video.addEventListener("timeupdate", this.options.onPlaying);
+		}
 
 		// To be sure 'canplay' event that isn't already fired
 		if (this.video.readyState > 3 && !this.ready) {
@@ -276,19 +290,25 @@ window.CanvasVideoPlayer = (function () {
 			this.ended = false;
 			this.video.currentTime = 0;
 		}
-		this.loop();
-
-		if (this.options.audio) {
-			// Resync audio and video
-			this.audio.currentTime = this.video.currentTime;
-			this.audio.play();
+		if (iOS) {
+			this.loop();
+			if (this.options.audio) {
+				// Resync audio and video
+				this.audio.currentTime = this.video.currentTime;
+				this.audio.play();
+			}
+		} else {
+			this.video.play();
 		}
 		this.options.onPlay();
 	};
 
 	CanvasVideoPlayer.prototype.pause = function () {
 		this.playing = false;
-
+		if (!iOS) {
+			this.video.pause();
+			return;
+		}
 		if (this.options.audio) {
 			this.audio.pause();
 		}
@@ -351,6 +371,7 @@ window.CanvasVideoPlayer = (function () {
 	};
 
 	CanvasVideoPlayer.prototype.drawFrame = function () {
+		if (!iOS) return;
 		this.ctx.drawImage(this.video, 0, 0, this.width, this.height);
 	};
 
