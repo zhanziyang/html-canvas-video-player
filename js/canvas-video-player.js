@@ -31,7 +31,9 @@ window.CanvasVideoPlayer = (function () {
 		canvasClickHandler: null,
 		videoTimeUpdateHandler: null,
 		videoCanPlayHandler: null,
-		windowResizeHandler: null
+		windowResizeHandler: null,
+		videoPauseHandler: null,
+		videoEndHandler: null
 	};
 
 	var CanvasVideoPlayer = function (options) {
@@ -45,7 +47,12 @@ window.CanvasVideoPlayer = (function () {
 			timelineSelector: false,
 			resetOnLastFrame: true,
 			loop: false,
-			playPauseWhenClick: false
+			playPauseWhenClick: false,
+			onReady: function () { },
+			onPlay: function () { },
+			onPlaying: function () { },
+			onPause: function () { },
+			onEnd: function () { }
 		};
 
 		for (i in options) {
@@ -110,6 +117,8 @@ window.CanvasVideoPlayer = (function () {
 		this.ctx = this.canvas.getContext('2d');
 
 		this.playing = false;
+		this.ready = false;
+		this.ended = false;
 
 		this.resizeTimeoutReference = false;
 		this.RESIZE_TIMEOUT = 1000;
@@ -178,13 +187,35 @@ window.CanvasVideoPlayer = (function () {
 
 		// Draws first frame
 		this.video.addEventListener('canplay', cvpHandlers.videoCanPlayHandler = function () {
-			self.drawFrame();
+			if (!self.ready) {
+				self.drawFrame();
+				self.options.onReady();
+				self.ready = true;
+			}
 		});
 
+		// On each frame
+		this.video.addEventListener("seeked", this.options.onPlaying);
+
 		// To be sure 'canplay' event that isn't already fired
-		if (this.video.readyState >= 2) {
+		if (this.video.readyState > 3 && !this.ready) {
 			self.drawFrame();
+			self.options.onReady();
+			self.ready = true;
 		}
+
+		//on pause
+		this.video.addEventListener('pause', cvpHandlers.videoPauseHandler = function () {
+			if (!self.playing && !self.ended) {
+				self.options.onPause();
+			}
+		});
+
+		//on end
+		this.video.addEventListener('ended', cvpHandlers.videoEndHandler = function () {
+			self.ended = true;
+			self.options.onEnd();
+		});
 
 		if (self.options.autoplay) {
 			self.play();
@@ -213,6 +244,10 @@ window.CanvasVideoPlayer = (function () {
 			this.canvas.removeEventListener('click', cvpHandlers.canvasClickHandler);
 			this.video.removeEventListener('timeupdate', cvpHandlers.videoTimeUpdateHandler);
 			this.video.removeEventListener('canplay', cvpHandlers.videoCanPlayHandler);
+			this.video.removeEventListener('pause', cvpHandlers.videoPauseHandler);
+			this.video.removeEventListener('ended', cvpHandlers.videoEndHandler);
+			this.video.removeEventListener("timeupdate", this.options.onPlaying);
+			this.video.removeEventListener("seeked", this.options.onPlaying);
 			window.removeEventListener('resize', cvpHandlers.windowResizeHandler);
 
 			if (this.options.audio) {
@@ -237,7 +272,8 @@ window.CanvasVideoPlayer = (function () {
 	CanvasVideoPlayer.prototype.play = function () {
 		this.lastTime = Date.now();
 		this.playing = true;
-		if (this.video.ended) {
+		if (this.ended) {
+			this.ended = false;
 			this.video.currentTime = 0;
 		}
 		this.loop();
@@ -247,6 +283,7 @@ window.CanvasVideoPlayer = (function () {
 			this.audio.currentTime = this.video.currentTime;
 			this.audio.play();
 		}
+		this.options.onPlay();
 	};
 
 	CanvasVideoPlayer.prototype.pause = function () {
@@ -268,6 +305,9 @@ window.CanvasVideoPlayer = (function () {
 
 	CanvasVideoPlayer.prototype.loop = function () {
 		if (!this.playing) {
+			if (!this.ended) {
+				this.options.onPause();
+			}
 			cancelAnimationFrame(this.animationFrame);
 			return;
 		}
